@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schraubennachweis EC3</title>
+<style>
+/* ===== Farben und Grundlayout · hell/dunkel ===== */
+:root{
+  --paper:#fbfaf7; --ink:#1c1c1a; --muted:#6f6d66; --line:#dcd9d1; --rot:#b3261e;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){ --paper:#161614; --ink:#ecebe6; --muted:#9a978f; --line:#34332f; --rot:#e5735f; }
+}
+:root[data-theme="dark"]{ --paper:#161614; --ink:#ecebe6; --muted:#9a978f; --line:#34332f; --rot:#e5735f; }
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.55 var(--sans)}
+main{max-width:1080px;margin:0 auto;padding:48px 16px 80px}
+h1{font-weight:400;font-size:clamp(1.6rem,3.2vw,2.3rem);letter-spacing:-.01em;margin:0 0 6px}
+.eyebrow{font-size:.74rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.klein{font-size:.88rem}
+.mono{font-family:var(--mono)}
+.einleitung{color:var(--muted);max-width:70ch;margin:0 0 34px}
+
+/* ===== Werkzeug ===== */
+.wz-steuer{display:flex;flex-wrap:wrap;gap:14px 22px;padding:16px 0;border-top:1px solid var(--line)}
+.wz-feld{display:flex;flex-direction:column;gap:5px;min-width:150px}
+.wz-feld.wz-schmal{min-width:0;width:118px}
+.wz-feld > span{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.wz-feld input,.wz-feld select{
+  font:inherit;font-family:var(--mono);font-size:.95rem;color:var(--ink);background:transparent;
+  border:0;border-bottom:1px solid var(--muted);padding:4px 0;border-radius:0;width:100%}
+.wz-feld input:focus,.wz-feld select:focus{outline:none;border-bottom:2px solid var(--ink)}
+.wz-feld select option{background:var(--paper);color:var(--ink)}
+.wz-schalter{display:inline-flex;border:1px solid var(--muted)}
+.wz-schalter button{font:inherit;font-size:.86rem;background:transparent;color:var(--muted);
+  border:0;padding:5px 12px;cursor:pointer}
+.wz-schalter button + button{border-left:1px solid var(--muted)}
+.wz-schalter button[aria-pressed="true"]{background:var(--ink);color:var(--paper)}
+
+.wz-plot{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-wrap:wrap;align-items:flex-start}
+.wz-plot svg{display:block;height:auto}
+.wz-plot .sr-bild{flex:62 1 400px;min-width:0}
+.wz-plot .sr-balken{flex:38 1 260px;min-width:0}
+.wz-t{font-family:var(--mono);font-size:14px;fill:var(--ink)}
+@media (max-width:640px){ .wz-plot .sr-bild .wz-t{font-size:18px} }
+
+.wz-ergebnis{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));
+  border-top:1px solid var(--line)}
+.wz-ergebnis > div{padding:16px 14px 16px 0;border-bottom:1px solid var(--line);display:flex;flex-direction:column}
+.wz-ergebnis .label,.label{font-size:.74rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.wz-ergebnis .wert{font-family:var(--mono);font-size:1.45rem;margin:2px 0}
+.wz-ergebnis .sub{font-size:.8rem;color:var(--muted)}
+
+.nw-zeile{border-top:1px solid var(--line);padding:16px 0;display:flex;flex-wrap:wrap;
+  gap:10px 28px;align-items:baseline}
+.nw-zeile .label{min-width:24ch}
+.nw-zeile .vergleich{font-family:var(--mono);font-size:1.02rem}
+.nw-zeile .eta{font-family:var(--mono);font-weight:500}
+.nw-zeile .quelle{font-size:.85rem;color:var(--muted)}
+.nw-detail{display:grid;grid-template-columns:auto auto;justify-content:start;gap:4px 18px;margin:-6px 0 0;
+  padding:0 0 16px 24ch;font-family:var(--mono);font-size:.86rem;color:var(--muted)}
+.nw-detail span{min-width:0;overflow-wrap:break-word}
+@media (max-width:900px){.nw-detail{padding-left:0}}
+.nw-detail .mass{color:var(--ink);font-weight:500}
+@media (max-width:640px){
+  .nw-detail{padding-left:0;grid-template-columns:1fr;gap:0}
+  .nw-detail span:nth-child(even){margin:0 0 6px 1.5em}
+}
+.rot{color:var(--rot)}
+
+/* ===== PDF-Knopf ===== */
+.wz-aktionen{display:flex;justify-content:flex-end;padding:16px 0;border-top:1px solid var(--line)}
+.wz-knopf{font:inherit;font-size:.86rem;color:var(--ink);background:transparent;border:1px solid var(--ink);
+  padding:7px 16px;cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.wz-knopf:hover{background:var(--ink);color:var(--paper)}
+.wz-knopf:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.nur-druck{display:none}
+
+/* ===== Druck / PDF: immer hell, A4, keine Bedienelemente ===== */
+@media print{
+  :root, :root[data-theme="dark"], :root:not([data-theme="light"]){
+    --paper:#fff; --ink:#111; --muted:#5f5d57; --line:#cfccc4; --rot:#b3261e; }
+  @page{size:A4;margin:14mm 14mm 16mm}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  body{font-size:9.5pt;background:#fff}
+  main{max-width:none;padding:0}
+  h1{font-size:17pt}
+  .einleitung{margin-bottom:12px}
+  .nur-druck{display:block}
+  .wz-aktionen{display:none}
+  .wz-steuer{padding:6px 0;gap:6px 16px}
+  .wz-feld{min-width:96px;gap:1px}
+  .wz-feld.wz-schmal{width:84px}
+  .wz-feld > span{font-size:6.5pt}
+  .wz-feld input,.wz-feld select{font-size:9pt}
+  .wz-feld input,.wz-feld select{border-bottom:0;padding:0;appearance:none;-webkit-appearance:none}
+  .wz-feld input::-webkit-inner-spin-button{display:none}
+  .wz-schalter{border:0}
+  .wz-schalter button{display:none;padding:0;border:0 !important}
+  .wz-schalter button[aria-pressed="true"]{display:inline;background:transparent;color:var(--ink);
+    font-family:var(--mono)}
+  .wz-plot{break-inside:avoid;flex-wrap:nowrap}
+  .wz-plot .sr-bild{flex:62 1 0}
+  .wz-plot .sr-balken{flex:38 1 0}
+  .wz-ergebnis{grid-template-columns:repeat(5,1fr)}
+  .wz-ergebnis > div{padding:6px 10px 6px 0;break-inside:avoid}
+  .wz-ergebnis .wert{font-size:12pt}
+  .wz-ergebnis .sub{font-size:7pt}
+  .nw-zeile{padding:6px 0;gap:4px 20px;break-inside:avoid}
+  .nw-zeile .vergleich{font-size:9.5pt}
+  .nw-zeile .quelle{font-size:7.5pt}
+  #sr-nachweise .eyebrow{margin:16px 0 2px !important}
+  .wz-plot{padding-top:4px}
+  .nw-gruppe{break-inside:avoid}
+  .nw-detail{break-inside:avoid;padding:0 0 8px 0;font-size:8.5pt}
+  .eyebrow{break-after:avoid}
+}
+</style>
+</head>
+<body>
+<main>
+  <p class="eyebrow">Werkzeug · Stahlbau</p>
+  <h1>Schraubenverbindung nach EN 1993-1-8</h1>
+  <p class="einleitung">Scher-/Lochleibungsverbindung (Kategorie A), optional gleitfest (Kategorie C),
+    mit Zug (Kategorie D). Die Schnittgrößen werden gleichmäßig auf alle Schrauben verteilt.</p>
+
+  <p class="nur-druck klein" id="sr-druckinfo" style="color:var(--muted);margin:0 0 6px"></p>
+  <div id="schraube-werkzeug"></div>
+
+  <p class="klein" style="color:var(--muted);margin-top:40px">Ohne Gewähr. Das Werkzeug ersetzt keine
+    prüffähige Statik.</p>
+</main>
+
+<script>
+/* ===== Schraubennachweis · EN 1993-1-8, Tab. 3.4 ===== */
+(function(){
+"use strict";
+
+/* Schrauben: d, Spannungsquerschnitt As, Loch d0 (normales Lochspiel),
+   Schlüsselweite s und Eckmaß e nach ISO 4014 (für dm beim Durchstanzen) */
+const SCHRAUBEN = {
+  M12:{d:12, As:84.3, d0:13, s:18, e:19.85},
+  M16:{d:16, As:157,  d0:18, s:24, e:26.17},
+  M20:{d:20, As:245,  d0:22, s:30, e:32.95},
+  M22:{d:22, As:303,  d0:24, s:34, e:37.29},
+  M24:{d:24, As:353,  d0:26, s:36, e:39.55},
+  M27:{d:27, As:459,  d0:30, s:41, e:45.20},
+  M30:{d:30, As:561,  d0:33, s:46, e:50.85},
+  M36:{d:36, As:817,  d0:39, s:55, e:60.79}
+};
+const KLASSEN = {"4.6":{fub:400,fyb:240}, "5.6":{fub:500,fyb:300},
+                 "8.8":{fub:800,fyb:640}, "10.9":{fub:1000,fyb:900}};
+const STAHL   = {S235:360, S275:430, S355:490};         // fu für t ≤ 40 mm
+const REIBUNG = {A:0.5, B:0.4, C:0.3, D:0.2};
+const GM2 = 1.25, GM3 = 1.25;
+
+/* Lochart: Lochspiel Δd nach EN 1090-2 Tab. 11 (Langlöcher: in Längsrichtung),
+   ks nach EN 1993-1-8 Tab. 3.6, Abminderung der Lochleibung nach 3.6.1 (5)   */
+const LOCHARTEN = [["normal","Normalloch"], ["gross","übergroßes Loch"],
+                   ["kurz","kurzes Langloch"], ["lang","langes Langloch"]];
+function lochspiel(d, art){
+  const i = d <= 14 ? 0 : d <= 22 ? 1 : d === 24 ? 2 : 3;
+  if (art === "gross") return [3,4,6,8][i];
+  if (art === "kurz")  return [4,6,8,10][i];
+  if (art === "lang")  return 1.5*d;
+  return [1,2,2,3][i];
+}
+function lochVon(s, art, richtung){
+  const breite = s.d + (art === "gross" ? lochspiel(s.d,"gross") : lochspiel(s.d,"normal"));
+  const laenge = art === "kurz" || art === "lang" ? s.d + lochspiel(s.d, art) : breite;
+  const lang = laenge > breite;
+  const parallel = lang && richtung === "parallel";
+  /* Lochmaß in Kraftrichtung (x) und quer dazu (y) */
+  const dx = parallel ? laenge : breite, dy = lang && !parallel ? laenge : breite;
+  const ks = art === "gross" ? 0.85
+           : art === "kurz" ? (parallel ? 0.76 : 0.85)
+           : art === "lang" ? (parallel ? 0.63 : 0.70) : 1.0;
+  const faktorFb = art === "gross" ? 0.8 : lang && !parallel ? 0.6 : 1.0;
+  return {breite, laenge, lang, parallel, dx, dy, ks, faktorFb};
+}
+
+/* Bezeichnung der Randabstände in Kraftrichtung (x) und quer (y) */
+const randNamen = L => !L.lang ? ["e1","e2"] : L.parallel ? ["e4","e3"] : ["e3","e4"];
+
+/* Zustand */
+const E = {m:"M20", kl:"8.8", stahl:"S235", t:12, n1:2, n2:2,
+           e1:40, e2:35, p1:65, p2:70, fugen:1, scherung:"gewinde",
+           loch:"normal", richtung:"quer",
+           kat:"A", reib:"A", Fv:180, Ft:0};
+
+const fmt = (v,n) => (isFinite(v) ? v : 0).toLocaleString("de-DE",
+                      {minimumFractionDigits:n, maximumFractionDigits:n});
+const clamp = (v,a,b) => Math.min(Math.max(v,a),b);
+
+/* ------------------------------ Rechnung ------------------------------ */
+function rechnen(e){
+  const s = SCHRAUBEN[e.m], k = KLASSEN[e.kl], fu = STAHL[e.stahl];
+  const L = lochVon(s, e.loch, e.richtung);
+  const d = s.d, d0 = L.breite, A = Math.PI*d*d/4;
+  const n = e.n1*e.n2;
+
+  /* Abscheren */
+  const imGewinde = e.scherung === "gewinde";
+  const alphaV = imGewinde && e.kl === "10.9" ? 0.5 : 0.6;
+  const Ascher = imGewinde ? s.As : A;
+  /* Rand- und Lochabstände: Rundloch e1/e2 und p1/p2 zur Lochmitte.
+     Langloch nach Bild 3.1 e): e3 von der Langlochachse, e4 vom Mittelpunkt
+     des Endkreises zum Rand. In Schlitzrichtung wird p analog zu e4 zwischen
+     den nächstliegenden Endkreismittelpunkten gemessen, quer zur Schlitz-
+     richtung von Achse zu Achse. So steht jedes Langlochende wie ein Rundloch
+     d0 im Abstand e bzw. p — genau so geht es in die Lochleibung ein.        */
+  const zx = L.dx - d0, zy = L.dy - d0;       // Überlänge je Richtung
+  const p1m = e.p1 + zx, p2m = e.p2 + zy;     // Abstand Lochmitte–Lochmitte
+  const [nameX, nameY] = randNamen(L);
+
+  const Lj = (e.n1-1)*p1m;
+  const betaLf = Lj > 15*d ? clamp(1 - (Lj-15*d)/(200*d), 0.75, 1) : 1;
+  const FvRd = betaLf*e.fugen*alphaV*k.fub*Ascher/GM2/1000;
+
+  /* Lochleibung: maßgebend die Randschraube in Kraftrichtung */
+  const aEnde  = e.e1/(3*d0);
+  const aInnen = e.n1 > 1 ? e.p1/(3*d0) - 0.25 : Infinity;
+  const alphaD = Math.min(aEnde, aInnen);
+  const alphaB = Math.min(alphaD, k.fub/fu, 1);
+  const k1Rand  = 2.8*e.e2/d0 - 1.7;
+  const k1Innen = e.n2 > 1 ? 1.4*e.p2/d0 - 1.7 : Infinity;
+  const k1 = Math.max(Math.min(k1Rand, k1Innen, 2.5), 0);
+  /* Abminderung für übergroße Löcher / Langlöcher quer: Tab. 3.4, Anm. 1) und 2) */
+  const FbRd0 = L.faktorFb*k1*alphaB*fu*d*e.t/GM2/1000;
+  /* einschnittig mit nur einer Schraubenreihe quer zur Kraft: 3.6.1 (10) */
+  const einreihig = e.fugen === 1 && e.n1 === 1;
+  const FbMax = 1.5*fu*d*e.t/GM2/1000;
+  const FbRd = einreihig ? Math.min(FbRd0, FbMax) : FbRd0;
+
+  /* Zug und Durchstanzen */
+  const FtRd = 0.9*k.fub*s.As/GM2/1000;
+  const dm = (s.s + s.e)/2;
+  const BpRd = 0.6*Math.PI*dm*e.t*fu/GM2/1000;
+
+  /* Einwirkung je Schraube */
+  const FvEd = e.Fv/n, FtEd = e.Ft/n;
+
+  /* Gleitfest (Kat. C) */
+  const FpC = 0.7*k.fub*s.As/1000;
+  const mu = REIBUNG[e.reib];
+  const FsRd = Math.max(L.ks*e.fugen*mu*(FpC - 0.8*FtEd)/GM3, 0);
+  const vorgespannt = e.kl === "8.8" || e.kl === "10.9";
+
+  const nachweise = [
+    ...(e.kat === "C" ? [] : [{name:"Abscheren", ed:FvEd, rd:FvRd, formel:`αv · fub · A${imGewinde?"s":""} / γM2 · ${e.fugen} Fuge${e.fugen>1?"n":""}${betaLf<1?` · βLf = ${fmt(betaLf,2)}`:""}`, quelle:"Tab. 3.4"}]),
+    {name:"Lochleibung", ed:FvEd, rd:FbRd,
+     formel:`${L.faktorFb<1?fmt(L.faktorFb,1)+" · ":""}k1 · αb · fu · d · t / γM2`,
+     quelle: `Tab. 3.4${L.faktorFb<1?", Anm. 1)/2)":""}${einreihig && FbRd0 > FbMax ? ", begrenzt nach 3.6.1 (10)" : ""}`}
+  ];
+  if (e.kat === "C") nachweise.push(
+    {name:"Gleiten", ed:FvEd, rd:FsRd, formel:`ks · n · μ · (Fp,C − 0,8 · Ft,Ed) / γM3`, quelle:"3.9.1, 3.9.2"});
+  if (e.Ft > 0) nachweise.push(
+    {name:"Zug", ed:FtEd, rd:FtRd, formel:`k2 · fub · As / γM2`, quelle:"Tab. 3.4"},
+    {name:"Durchstanzen", ed:FtEd, rd:BpRd, formel:`0,6 · π · dm · tp · fu / γM2`, quelle:"Tab. 3.4"},
+    /* Interaktion nur bei Scher-Lochleibung; in Kat. C über Fs,Rd nach 3.9.2 erfasst */
+    ...(e.kat === "C" ? [] : [{name:"Abscheren + Zug", ed:null, rd:null, formel:`Fv,Ed / Fv,Rd + Ft,Ed / (1,4 · Ft,Rd)`, quelle:"Tab. 3.4",
+     eta: FvEd/FvRd + FtEd/(1.4*FtRd)}]));
+  nachweise.forEach(x => { if (x.eta === undefined) x.eta = x.rd > 0 ? x.ed/x.rd : Infinity; });
+
+  /* Rand- und Lochabstände, Tab. 3.3: e1, e2 ≥ 1,2 · d0; e3, e4 ≥ 1,5 · d0 */
+  const pMax = Math.min(14*e.t, 200), eMax = 4*e.t + 40;
+  const fe = L.lang ? 1.5 : 1.2;
+  const abstaende = [
+    {name:`Randabstand ${nameX}`, ist:e.e1, min:fe*d0, max:eMax},
+    {name:`Randabstand ${nameY}`, ist:e.e2, min:fe*d0, max:eMax},
+    /* Mindestwert auf den eingegebenen Abstand, Höchstwert auf Mitte–Mitte */
+    ...(e.n1>1 ? [{name:`Lochabstand p1${zx>0?" (Endkreise)":""}`, ist:e.p1, min:2.2*d0, max:pMax - zx}] : []),
+    ...(e.n2>1 ? [{name:`Lochabstand p2${zy>0?" (Endkreise)":""}`, ist:e.p2, min:2.4*d0, max:pMax - zy}] : [])
+  ];
+
+  return {aEnde, aInnen, einreihig, FbMax, s, k, fu, d, d0, A, n, L, zx, zy, p1m, p2m, nameX, nameY, alphaV, betaLf, alphaD, alphaB, k1, FvRd, FbRd, FtRd, BpRd,
+          FvEd, FtEd, FpC, FsRd, mu, vorgespannt, nachweise, abstaende};
+}
+
+/* ------------------------------- Markup ------------------------------- */
+const feld = (id, label, wert, schritt, min) =>
+  `<label class="wz-feld wz-schmal"><span id="sr-${id}-lbl">${label}</span>
+   <input id="sr-${id}" type="number" inputmode="decimal" step="${schritt}" min="${min}" value="${wert}"></label>`;
+const auswahl = (id, label, liste, wert) =>
+  `<label class="wz-feld"><span>${label}</span><select id="sr-${id}">${
+   liste.map(([k,t]) => `<option value="${k}"${k===wert?" selected":""}>${t}</option>`).join("")}</select></label>`;
+const schalter = (key, label, optionen) =>
+  `<div class="wz-feld"><span>${label}</span><div class="wz-schalter" data-sr="${key}">${
+   optionen.map(([k,t]) => `<button type="button" data-w="${k}">${t}</button>`).join("")}</div></div>`;
+
+function aufbauen(wurzel){
+  wurzel.innerHTML = `
+    <div class="wz-steuer">
+      ${auswahl("m","Schraube", Object.keys(SCHRAUBEN).map(k=>[k,k]), E.m)}
+      ${auswahl("kl","Festigkeitsklasse", Object.keys(KLASSEN).map(k=>[k,k]), E.kl)}
+      ${auswahl("stahl","Stahlgüte Blech", Object.keys(STAHL).map(k=>[k,k]), E.stahl)}
+      ${feld("t","t maßg. [mm]", E.t, 1, 1)}
+    </div>
+    <div class="wz-steuer">
+      ${feld("n1","n1 in Kraftr.", E.n1, 1, 1)}
+      ${feld("n2","n2 quer", E.n2, 1, 1)}
+      ${feld("e1","e1 [mm]", E.e1, 1, 0)}
+      ${feld("e2","e2 [mm]", E.e2, 1, 0)}
+      ${feld("p1","p1 [mm]", E.p1, 1, 0)}
+      ${feld("p2","p2 [mm]", E.p2, 1, 0)}
+    </div>
+    <div class="wz-steuer">
+      ${schalter("fugen","Scherfugen",[["1","einschnittig"],["2","zweischnittig"]])}
+      ${schalter("scherung","Scherfuge im",[["gewinde","Gewinde"],["schaft","Schaft"]])}
+    </div>
+    <div class="wz-steuer">
+      ${auswahl("loch","Lochart", LOCHARTEN, E.loch)}
+      <span id="sr-richtung-box">${schalter("richtung","Langloch zur Kraft",[["quer","quer"],["parallel","parallel"]])}</span>
+      ${schalter("kat","Kategorie",[["A","A · SL"],["C","C · gleitfest"]])}
+      <span id="sr-reib-box">${auswahl("reib","Reibflächenklasse",
+        [["A","A · μ = 0,5"],["B","B · μ = 0,4"],["C","C · μ = 0,3"],["D","D · μ = 0,2"]], E.reib)}</span>
+    </div>
+    <div class="wz-steuer">
+      ${feld("Fv","Fv,Ed gesamt [kN]", E.Fv, 5, 0)}
+      ${feld("Ft","Ft,Ed gesamt [kN]", E.Ft, 5, 0)}
+    </div>
+    <div class="wz-aktionen">
+      <button type="button" class="wz-knopf" id="sr-pdf" title="Öffnet den Druckdialog – dort „Als PDF speichern“ wählen">
+        <svg width="14" height="14" viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>
+        Als PDF speichern</button>
+    </div>
+    <div class="wz-plot" id="sr-plot"></div>
+    <div class="wz-ergebnis" id="sr-ergebnis"></div>
+    <div id="sr-nachweise"></div>`;
+}
+
+/* -------------------------------- Bild -------------------------------- */
+function zeichnen(r, e){
+  const B = 1000, H = 470;
+  /* Draufsicht auf das Blech: Kraft wirkt nach links, Blechende links */
+  /* Lochmitten: e bis Endkreis bzw. Achse, dazu die halbe Überlänge */
+  const cx0 = e.e1 + r.zx/2, cy0 = e.e2 + r.zy/2;
+  const breite = 2*cy0 + (e.n2-1)*r.p2m;
+  const lang   = cx0 + (e.n1-1)*r.p1m + Math.max(e.e1, 40);
+  const fx = 470, fy = 290;                             // Zeichenfläche links
+  const m = Math.min(fx/lang, fy/breite);
+  const ox = 80, oy = 124 + (fy - breite*m)/2;
+  const X = v => ox + v*m, Y = v => oy + v*m;
+  const rL = r.d0/2*m;
+  const hx = (r.L.dx - r.d0)/2*m, hy = (r.L.dy - r.d0)/2*m;   // halbe Überlänge im Bild
+
+  let g = "";
+  /* Blech, rechts mit Bruchkante */
+  const xr = X(lang);
+  g += `<path d="M ${X(0)} ${Y(0)} L ${xr} ${Y(0)} L ${xr-8} ${Y(breite*.33)} L ${xr+6} ${Y(breite*.66)} L ${xr} ${Y(breite)} L ${X(0)} ${Y(breite)} Z"
+          fill="var(--ink)" fill-opacity=".06" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>`;
+  /* Löcher */
+  for (let i=0;i<e.n1;i++) for (let j=0;j<e.n2;j++){
+    const cx = X(cx0 + i*r.p1m), cy = Y(cy0 + j*r.p2m);
+    /* Rundloch = Rechteck mit vollem Radius; Langloch = gestreckt */
+    g += `<rect x="${(cx-rL-hx).toFixed(1)}" y="${(cy-rL-hy).toFixed(1)}" width="${(2*(rL+hx)).toFixed(1)}"
+            height="${(2*(rL+hy)).toFixed(1)}" rx="${rL.toFixed(1)}" fill="var(--paper)" stroke="var(--ink)" stroke-width="1.3"/>
+          <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${(r.d/2*m).toFixed(1)}" fill="var(--ink)" fill-opacity=".14"/>
+          <path d="M ${(cx-rL-hx-4).toFixed(1)} ${cy.toFixed(1)} h ${(2*(rL+hx)+8).toFixed(1)} M ${cx.toFixed(1)} ${(cy-rL-hy-4).toFixed(1)} v ${(2*(rL+hy)+8).toFixed(1)}"
+            stroke="var(--muted)" stroke-width=".8" stroke-dasharray="4 2 1 2"/>`;
+  }
+  /* Maßketten */
+  /* Maßketten; ist die p-Kette zu schmal für den Text, steht er hinter dem Kettenende */
+  const mh = (x1,x2,y,txt,versatz) => `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="var(--muted)" stroke-width="1"/>
+     <path d="M ${x1-4} ${y+4} l 8 -8 M ${x2-4} ${y+4} l 8 -8" stroke="var(--muted)" stroke-width="1.1"/>
+     ${versatz && x2-x1 < 40
+        ? `<text x="${x2+10}" y="${y+5}" class="wz-t" text-anchor="start" fill="var(--muted)">${txt}</text>`
+        : `<text x="${(x1+x2)/2}" y="${y-7}" class="wz-t" text-anchor="middle" fill="var(--muted)">${txt}</text>`}`;
+  const mv = (y1,y2,x,txt,versatz) => `<line x1="${x}" y1="${y1}" x2="${x}" y2="${y2}" stroke="var(--muted)" stroke-width="1"/>
+     <path d="M ${x-4} ${y1+4} l 8 -8 M ${x-4} ${y2+4} l 8 -8" stroke="var(--muted)" stroke-width="1.1"/>
+     <text x="${x-8}" y="${versatz && y2-y1 < 34 ? y2+20 : (y1+y2)/2+5}" class="wz-t" text-anchor="end" fill="var(--muted)">${txt}</text>`;
+  /* Bezugslinie am Endkreismittelpunkt bzw. an der Achse des ersten Lochs */
+  const hilf = (x1,y1,x2,y2) => `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+     stroke="var(--muted)" stroke-width=".8" stroke-dasharray="3 3"/>`;
+  const yo = Y(0) - 26, xo = X(0) - 22;
+  g += hilf(X(e.e1), yo, X(e.e1), Y(cy0)) + hilf(xo, Y(e.e2), X(cx0), Y(e.e2));
+  g += mh(X(0), X(e.e1), yo, r.nameX);
+  /* p zwischen den nächstliegenden Endkreismittelpunkten (Rundloch: Lochmitten) */
+  const a1 = cx0 + r.zx/2, b1 = a1 + e.p1, a2 = cy0 + r.zy/2, b2 = a2 + e.p2;
+  if (e.n1 > 1) g += hilf(X(a1), yo, X(a1), Y(cy0)) + hilf(X(b1), yo, X(b1), Y(cy0)) + mh(X(a1), X(b1), yo, "p1", true);
+  g += mv(Y(0), Y(e.e2), xo, r.nameY);
+  if (e.n2 > 1) g += hilf(xo, Y(a2), X(cx0), Y(a2)) + hilf(xo, Y(b2), X(cx0), Y(b2)) + mv(Y(a2), Y(b2), xo, "p2", true);
+
+  /* Kraftpfeil unter dem Blech, damit er die Maßketten links nicht kreuzt */
+  const pa = Y(breite) + 30, aktiv = e.Fv > 0;
+  const px1 = X(Math.min(lang*.55, cx0 + (e.n1-1)*r.p1m)), px2 = Math.max(X(0), px1 - 110);
+  g += `<line x1="${px1.toFixed(1)}" y1="${pa.toFixed(1)}" x2="${px2.toFixed(1)}" y2="${pa.toFixed(1)}" stroke="${aktiv?"var(--ink)":"var(--muted)"}"
+          stroke-width="${aktiv?2:1.3}" opacity="${aktiv?1:.4}" marker-end="url(#sr-spitze)"/>
+        <text x="${(px1+12).toFixed(1)}" y="${(pa+5).toFixed(1)}" class="wz-t"${aktiv?"":' fill="var(--muted)"'}>Fv,Ed = ${fmt(e.Fv,1)} kN</text>`;
+  /* Bildüberschrift zweizeilig, damit sie nicht in die Ausnutzung läuft */
+  g += `<text x="${ox}" y="38" class="wz-t" fill="var(--muted)">${e.n1} × ${e.n2} ${e.m} · ${e.kl} · t = ${fmt(e.t,0)} mm</text>
+        <text x="${ox}" y="58" class="wz-t" fill="var(--muted)">${r.L.lang ? `Langloch ${fmt(r.d0,0)} × ${fmt(r.L.laenge,0)} mm` : `d0 = ${fmt(r.d0,0)} mm`}${e.Ft>0?` · Ft,Ed = ${fmt(e.Ft,1)} kN`:""}</text>`;
+
+  /* rechts: Ausnutzung */
+  const x0 = 640, voll = 200, kappe = 1.35;
+  let yb = 110;
+  const schritt = Math.min(62, 300/Math.max(r.nachweise.length,1));
+  let bars = `<text x="${x0}" y="58" class="wz-t" fill="var(--muted)">Ausnutzung je Schraube</text>`;
+  r.nachweise.forEach(n => {
+    const ueber = n.eta > 1, farbe = ueber ? "var(--rot)" : "var(--ink)";
+    bars += `<text x="${x0}" y="${yb-8}" class="wz-t">${n.name}</text>
+      <rect x="${x0}" y="${yb}" width="${voll}" height="18" fill="var(--ink)" opacity=".07"/>
+      <rect x="${x0}" y="${yb}" width="${(clamp(n.eta,0,kappe)*voll).toFixed(1)}" height="18" fill="${farbe}" opacity="${ueber?.85:.55}"/>
+      <line x1="${x0+voll}" y1="${yb-4}" x2="${x0+voll}" y2="${yb+22}" stroke="var(--ink)" stroke-width="1.2"/>
+      <text x="${x0+voll*kappe+12}" y="${yb+14}" class="wz-t" fill="${farbe}">η ${!isFinite(n.eta) ? "= –" : n.eta >= 10 ? "> 10" : "= "+fmt(n.eta,2)}</text>`;
+    yb += schritt;
+  });
+  bars += `<text x="${x0+voll}" y="${yb-schritt+42}" class="wz-t" text-anchor="middle" fill="var(--muted)">1,00</text>`;
+
+  /* zwei Bilder: nebeneinander am Desktop, untereinander am Handy */
+  document.getElementById("sr-plot").innerHTML =
+    `<svg class="sr-bild" viewBox="0 0 620 ${H}" role="img" aria-label="Draufsicht auf das Blech mit Lochbild">
+      <defs><marker id="sr-spitze" viewBox="0 0 10 10" refX="9.5" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="var(--ink)"/></marker></defs>${g}</svg>
+     <svg class="sr-balken" viewBox="620 20 380 ${Math.max(yb + 30, 200)}" role="img" aria-label="Ausnutzung je Schraube">${bars}</svg>`;
+}
+
+/* ------------------------------ Ergebnis ------------------------------ */
+function ergebnis(r, e){
+  const kasten = (l, w, s) => `<div><span class="label">${l}</span><span class="wert">${w}</span><span class="sub">${s}</span></div>`;
+  document.getElementById("sr-ergebnis").innerHTML =
+    kasten("Fv,Ed", fmt(r.FvEd,1), `kN je Schraube · n = ${r.n}`) +
+    kasten("Fv,Rd", fmt(r.FvRd,1), `kN · αv = ${fmt(r.alphaV,1)}`) +
+    kasten("Fb,Rd", fmt(r.FbRd,1), `kN · k1 = ${fmt(r.k1,2)} · αb = ${fmt(r.alphaB,2)}`) +
+    kasten("Ft,Rd", fmt(r.FtRd,1), `kN · As = ${fmt(r.s.As,1)} mm²`) +
+    kasten("Bp,Rd", fmt(r.BpRd,1), "kN · Durchstanzen") +
+    (e.kat === "C" ? kasten("Fs,Rd", fmt(r.FsRd,1), `kN · Fp,C = ${fmt(r.FpC,1)} kN`) : "") +
+    (e.loch !== "normal" ? kasten("Loch", r.L.lang ? `${fmt(r.d0,0)} × ${fmt(r.L.laenge,0)}` : fmt(r.d0,0),
+      `mm · ${LOCHARTEN.find(l => l[0] === e.loch)[1]}`) : "") +
+    kasten("fub", fmt(r.k.fub,0), `N/mm² · Klasse ${e.kl}`) +
+    kasten("fu", fmt(r.fu,0), `N/mm² · ${e.stahl}`);
+
+  const zeile = n => {
+    const ok = n.eta <= 1, cls = ok ? "" : " rot";
+    const vergleich = n.ed === null ? `${fmt(n.eta,2)} ${ok?"≤":">"} 1,00`
+      : `${fmt(n.ed,1)} ${ok?"≤":">"} ${fmt(n.rd,1)} kN`;
+    const detail = n.name === "Lochleibung" ? alphaBDetail() : "";
+    return `${detail ? '<div class="nw-gruppe">' : ""}<div class="nw-zeile"><span class="label">${n.name}</span>
+      <span class="vergleich">${vergleich}</span>
+      <span class="eta${cls}">η = ${isFinite(n.eta)?fmt(n.eta,2):"–"}</span>
+      <span class="quelle">${n.formel} · EN 1993-1-8 ${n.quelle}</span></div>${detail}${detail ? "</div>" : ""}`;
+  };
+  /* Herleitung von αb = min(αd; fub/fu; 1,0) nach Tab. 3.4 */
+  const alphaBDetail = () => {
+    const kand = [[`αd,Rand = ${r.nameX} / (3 · d0) = ${fmt(e.e1,1)} / (3 · ${fmt(r.d0,0)})`, r.aEnde, `Randabstand ${r.nameX}`]];
+    if (e.n1 > 1) kand.push([`αd,innen = p1 / (3 · d0) − 1/4 = ${fmt(e.p1,1)} / (3 · ${fmt(r.d0,0)}) − 0,25`, r.aInnen,
+                             `Lochabstand p1${r.zx>0?" (Endkreise)":""}`]);
+    kand.push([`fub / fu = ${fmt(r.k.fub,0)} / ${fmt(r.fu,0)}`, r.k.fub/r.fu, "Festigkeitsverhältnis fub / fu"]);
+    kand.push(["Obergrenze", 1, "Obergrenze 1,0"]);
+    const mass = kand.reduce((a,b) => b[1] < a[1] - 1e-12 ? b : a);
+    return `<div class="nw-detail">${kand.map(k =>
+        `<span${k===mass?' class="mass"':""}>${k[0]}</span><span${k===mass?' class="mass"':""}>= ${fmt(k[1],3)}</span>`).join("")}
+      <span class="mass">αb = min(${kand.map(k => fmt(k[1],2)).join("; ")})</span>
+      <span class="mass">= ${fmt(r.alphaB,3)} · maßgebend: ${mass[2]}</span></div>`;
+  };
+  const abstand = a => {
+    const okMin = a.ist >= a.min - 1e-9, okMax = a.ist <= a.max + 1e-9;
+    const text = !okMin ? "zu klein" : !okMax ? "zu groß" : "eingehalten";
+    return `<div class="nw-zeile"><span class="label">${a.name}</span>
+      <span class="vergleich">${fmt(a.min,1)} ≤ ${fmt(a.ist,1)} ≤ ${fmt(a.max,1)} mm</span>
+      <span class="eta${okMin&&okMax?"":" rot"}">${text}</span>
+      <span class="quelle">EN 1993-1-8 Tab. 3.3</span></div>`;
+  };
+
+  const hinweise = [];
+  const loch = LOCHARTEN.find(l => l[0] === e.loch)[1];
+  if (e.loch !== "normal") hinweise.push(`${loch}: ${r.L.lang ? `Breite ${fmt(r.d0,0)} mm, Länge ${fmt(r.L.laenge,0)} mm` : `d0 = ${fmt(r.d0,0)} mm`} (EN 1090-2 Tab. 11)${e.kat==="C" ? `, ks = ${fmt(r.L.ks,2)}` : ""}${r.L.faktorFb<1 ? `, Fb,Rd × ${fmt(r.L.faktorFb,1)}` : ""}.`);
+  if (r.L.lang) hinweise.push("Langloch nach Bild 3.1 e): e3 ab Langlochachse, e4 ab Mittelpunkt des Endkreises; p in Schlitzrichtung zwischen den nächstliegenden Endkreismittelpunkten, quer dazu von Achse zu Achse. In der Lochleibung wird das Langlochende wie ein Rundloch d0 angesetzt. Unterlegscheiben bzw. Deckscheiben vorsehen.");
+  if (r.L.parallel && e.kat === "A") hinweise.push(`<span class="rot">Langloch parallel zur Kraft: Die Schraube kann im Langloch gleiten und überträgt die Kraft erst nach dem Verschieben. Als Scher-Lochleibungsverbindung (Kat. A) nicht geeignet, gleitfest (Kat. C) ausführen.</span>`);
+  if (e.kat === "C" && !r.vorgespannt) hinweise.push("Gleitfeste Verbindungen nur mit Klasse 8.8 oder 10.9.");
+  if (r.betaLf < 1) hinweise.push(`Lange Verbindung: Abscheren mit βLf = ${fmt(r.betaLf,2)} abgemindert (3.8).`);
+  if (r.einreihig) hinweise.push(`Einschnittig mit nur einer Schraubenreihe: Fb,Rd ≤ 1,5 · fu · d · t / γM2 = ${fmt(r.FbMax,1)} kN, Unterlegscheiben unter Kopf und Mutter (3.6.1 (10)).`);
+  if (e.kat === "C") hinweise.push("Kategorie C: Abscheren ist nicht nachzuweisen; der Nettoquerschnitt Nnet,Rd des Bauteils ist gesondert zu prüfen (Tab. 3.2).");
+  hinweise.push("t ist die maßgebende Blechdicke: einschnittig das dünnere Blech, zweischnittig der kleinere Wert aus Mittelblech und Summe der Laschen.");
+  hinweise.push("Höchstabstände gelten für bewitterte bzw. druckbeanspruchte Bauteile. Lochleibung für die maßgebende Randschraube in Kraftrichtung, k2 = 0,9.");
+
+  document.getElementById("sr-nachweise").innerHTML =
+    `<p class="eyebrow" style="margin:34px 0 4px">Nachweise je Schraube</p>` +
+    r.nachweise.map(zeile).join("") +
+    `<p class="eyebrow" style="margin:34px 0 4px">Rand- und Lochabstände</p>` +
+    r.abstaende.map(abstand).join("") +
+    `<p class="klein" style="color:var(--muted);border-top:1px solid var(--line);padding-top:16px;max-width:72ch">
+      γM2 = ${fmt(GM2,2)} · γM3 = ${fmt(GM3,2)}. ${hinweise.join(" ")}</p>`;
+}
+
+/* ------------------------------- Binden ------------------------------- */
+function neu(){
+  const reib = document.getElementById("sr-reib-box");
+  if (reib) reib.hidden = E.kat !== "C";
+  const ri = document.getElementById("sr-richtung-box");
+  if (ri) ri.hidden = !(E.loch === "kurz" || E.loch === "lang");
+  const [nx, ny] = randNamen(lochVon(SCHRAUBEN[E.m], E.loch, E.richtung));
+  const lx = document.getElementById("sr-e1-lbl"), ly = document.getElementById("sr-e2-lbl");
+  if (lx) lx.textContent = `${nx} [mm]`;
+  if (ly) ly.textContent = `${ny} [mm]`;
+  document.querySelectorAll(".wz-schalter[data-sr] button").forEach(b =>
+    b.setAttribute("aria-pressed", String(E[b.parentElement.dataset.sr]) === b.dataset.w));
+  const r = rechnen(E);
+  zeichnen(r, E); ergebnis(r, E);
+}
+
+function binden(wurzel){
+  aufbauen(wurzel);
+  ["m","kl","stahl","reib","loch"].forEach(k =>
+    document.getElementById("sr-"+k).addEventListener("input", ev => { E[k] = ev.target.value; neu(); }));
+  const ganz = ["n1","n2"];
+  ["t","n1","n2","e1","e2","p1","p2","Fv","Ft"].forEach(k =>
+    document.getElementById("sr-"+k).addEventListener("input", ev => {
+      let v = parseFloat(String(ev.target.value).replace(",", "."));
+      if (!isFinite(v)) return;
+      if (ganz.includes(k)) v = Math.max(1, Math.round(v));
+      E[k] = Math.max(k === "t" ? 1 : 0, v);
+      neu();
+    }));
+  document.querySelectorAll(".wz-schalter[data-sr] button").forEach(b =>
+    b.addEventListener("click", () => {
+      const k = b.parentElement.dataset.sr;
+      E[k] = k === "fugen" ? Number(b.dataset.w) : b.dataset.w;
+      neu();
+    }));
+  /* PDF: Druckdialog des Browsers mit eigenem Druck-Layout und sprechendem Dateinamen */
+  document.getElementById("sr-pdf").addEventListener("click", () => {
+    const jetzt = new Date();
+    const datum = jetzt.toLocaleDateString("de-DE", {day:"2-digit", month:"2-digit", year:"numeric"});
+    const info = document.getElementById("sr-druckinfo");
+    if (info) info.textContent = `Berechnung vom ${datum}, ${jetzt.toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit"})} Uhr`;
+    const titelAlt = document.title;
+    const iso = jetzt.toISOString().slice(0,10);
+    const loch = E.loch === "normal" ? "" : "_" + E.loch;
+    document.title = `Schraubennachweis_${E.n1}x${E.n2}_${E.m}_${E.kl}${loch}_${iso}`;
+    const zurueck = () => { document.title = titelAlt; window.removeEventListener("afterprint", zurueck); };
+    window.addEventListener("afterprint", zurueck);
+    window.print();
+  });
+  neu();
+}
+
+const wurzel = document.getElementById("schraube-werkzeug");
+if (wurzel) binden(wurzel);
+window.schraubeRechnen = rechnen;     // zum Nachrechnen in der Konsole
+})();
+</script>
+</body>
+</html>
